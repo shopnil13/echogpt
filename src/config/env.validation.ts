@@ -45,7 +45,17 @@ export const envValidationSchema = Joi.object({
   SMTP_SECURE: Joi.boolean().default(false),
   SMTP_USER: Joi.string().allow(''),
   SMTP_PASS: Joi.string().allow(''),
+  ENCRYPTION_KEY: Joi.string()
+    .base64()
+    .required()
+    .custom((value: string, helpers) =>
+      Buffer.from(value, 'base64').length === 32 ? value : helpers.error('any.invalid'),
+    )
+    .messages({ 'any.invalid': 'ENCRYPTION_KEY must be 32 bytes encoded as base64' }),
   AI_MOCK_PROVIDER_ENABLED: Joi.boolean().default(false),
+  AI_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(600_000).default(60_000),
+  AI_HEALTH_CHECK_TIMEOUT_MS: Joi.number().integer().min(500).max(60_000).default(10_000),
+  AI_MAX_OUTPUT_TOKENS: Joi.number().integer().min(64).max(128_000).default(16_000),
   THROTTLE_TTL_SECONDS: Joi.number().integer().min(1).default(60),
   THROTTLE_LIMIT: Joi.number().integer().min(1).default(100),
 });
