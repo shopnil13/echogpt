@@ -24,6 +24,27 @@ export const envValidationSchema = Joi.object({
     .uri({ scheme: ['postgresql', 'postgres'] })
     .required(),
   DATABASE_POOL_MAX: Joi.number().integer().min(1).max(100).default(10),
+  JWT_ACCESS_SECRET: Joi.string().min(32).required(),
+  JWT_ACCESS_TTL_SECONDS: Joi.number().integer().min(60).max(3600).default(900),
+  REFRESH_TOKEN_TTL_DAYS: Joi.number().integer().min(1).max(90).default(30),
+  AUTH_THROTTLE_LIMIT: Joi.number().integer().min(1).default(10),
+  AUTH_THROTTLE_TTL_SECONDS: Joi.number().integer().min(1).default(60),
+  REQUIRE_EMAIL_VERIFICATION: Joi.boolean().default(false),
+  EMAIL_VERIFICATION_TTL_HOURS: Joi.number().integer().min(1).max(168).default(24),
+  EMAIL_VERIFICATION_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('http://localhost:3000/verify-email'),
+  MAIL_TRANSPORT: Joi.string().valid('log', 'smtp').default('log'),
+  MAIL_FROM: Joi.string().default('EchoGPT <no-reply@echogpt.local>'),
+  SMTP_HOST: Joi.when('MAIL_TRANSPORT', {
+    is: 'smtp',
+    then: Joi.string().hostname().required(),
+    otherwise: Joi.string().allow(''),
+  }),
+  SMTP_PORT: Joi.number().port().default(587),
+  SMTP_SECURE: Joi.boolean().default(false),
+  SMTP_USER: Joi.string().allow(''),
+  SMTP_PASS: Joi.string().allow(''),
   AI_MOCK_PROVIDER_ENABLED: Joi.boolean().default(false),
   THROTTLE_TTL_SECONDS: Joi.number().integer().min(1).default(60),
   THROTTLE_LIMIT: Joi.number().integer().min(1).default(100),

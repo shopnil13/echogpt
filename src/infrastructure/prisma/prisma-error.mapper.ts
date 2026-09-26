@@ -40,3 +40,8 @@ export function mapPrismaError(exception: unknown): MappedError | null {
       return null;
   }
 }
+
+/** True when the error is a unique-constraint violation (lets services translate races precisely). */
+export function isUniqueViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}
