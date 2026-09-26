@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Length, MaxLength } from 'class-validator';
 
 import { NormalizeEmail } from '../../../common/transforms/string.transforms';
-import { PASSWORD_MAX_LENGTH } from './register.dto';
+import { PASSWORD_MAX_LENGTH } from '../../../common/constants/password.constants';
 
 export class LoginDto {
   @ApiProperty({ example: 'jane@example.com' })
