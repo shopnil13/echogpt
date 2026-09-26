@@ -7,6 +7,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { REQUEST_ID_HEADER, requestIdMiddleware } from './common/middleware/request-id.middleware';
 import { createValidationPipe } from './common/pipes/validation.pipe';
 import { appConfig, type AppConfig } from './config/app.config';
+import { mapPrismaError } from './infrastructure/prisma/prisma-error.mapper';
 import { setupSwagger } from './infrastructure/swagger/swagger.setup';
 
 export const API_PREFIX = 'api';
@@ -43,7 +44,7 @@ export function configureApp(app: NestExpressApplication): void {
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   app.useGlobalPipes(createValidationPipe());
-  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalFilters(new AllExceptionsFilter([mapPrismaError]));
   app.enableShutdownHooks();
 
   if (config.swaggerEnabled) {
