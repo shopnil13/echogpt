@@ -1,4 +1,10 @@
-import { type ExecutionContext, Module } from '@nestjs/common';
+import {
+  type ExecutionContext,
+  type MiddlewareConsumer,
+  Module,
+  type NestModule,
+  RequestMethod,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -16,6 +22,10 @@ import { EmailVerifiedGuard } from './modules/auth/guards/email-verified.guard';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { HealthModule } from './modules/health/health.module';
+import { QuotaGuard } from './modules/subscriptions/guards/quota.guard';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { UsageLogMiddleware } from './modules/usage-logs/middleware/usage-log.middleware';
+import { UsageLogsModule } from './modules/usage-logs/usage-logs.module';
 import { UsersModule } from './modules/users/users.module';
 
 function isAuthThrottled(context: ExecutionContext): boolean {
@@ -47,15 +57,23 @@ function isAuthThrottled(context: ExecutionContext): boolean {
       ],
     }),
     HealthModule,
+    UsageLogsModule,
     UsersModule,
     AuthModule,
+    SubscriptionsModule,
   ],
-  // Global guards run in this order: rate limit, authentication, role check, email verification.
+  // Global guards run in this order: rate limit, authentication, role check, email verification,
+  // quota. Quota is last so rejected requests never consume allowance.
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useExisting: JwtAuthGuard },
     { provide: APP_GUARD, useExisting: RolesGuard },
     { provide: APP_GUARD, useExisting: EmailVerifiedGuard },
+    { provide: APP_GUARD, useExisting: QuotaGuard },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(UsageLogMiddleware).forRoutes({ path: '*path', method: RequestMethod.ALL });
+  }
+}
