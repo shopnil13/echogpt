@@ -29,6 +29,14 @@ const userCredentialsSelect = {
 /** Includes the password hash: never map this to a response. */
 export type UserCredentialsRecord = Prisma.UserGetPayload<{ select: typeof userCredentialsSelect }>;
 
+export interface AdminUserListQuery {
+  skip: number;
+  take: number;
+  search?: string;
+  role?: RoleName;
+  status?: UserStatus;
+}
+
 export interface CreateUserData {
   email: string;
   passwordHash: string;
@@ -98,6 +106,39 @@ export class UsersRepository {
   /** Hard delete; owned rows cascade and usage logs are anonymized by the FK (ADR-013). */
   async delete(id: string): Promise<void> {
     await this.prisma.user.delete({ where: { id } });
+  }
+
+  async listForAdmin(query: AdminUserListQuery): Promise<[UserProfileRecord[], number]> {
+    const where: Prisma.UserWhereInput = {
+      ...(query.role ? { role: { name: query.role } } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.search
+        ? {
+            OR: [
+              { email: { contains: query.search, mode: 'insensitive' } },
+              { fullName: { contains: query.search, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
+    return this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        select: userProfileSelect,
+        orderBy: { createdAt: 'desc' },
+        skip: query.skip,
+        take: query.take,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+  }
+
+  updateRole(id: string, role: RoleName, db: DbClient = this.prisma): Promise<UserProfileRecord> {
+    return db.user.update({
+      where: { id },
+      data: { role: { connect: { name: role } } },
+      select: userProfileSelect,
+    });
   }
 
   countByRole(role: RoleName): Promise<number> {
