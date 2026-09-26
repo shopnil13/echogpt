@@ -40,7 +40,14 @@ const PLANS = [
 ];
 
 /** Real providers start disabled: an admin must add an API key before enabling them. */
-const PROVIDERS = [
+interface ProviderSeed {
+  name: string;
+  type: ProviderType;
+  defaultModel: string;
+  models: Array<{ name: string; displayName: string }>;
+}
+
+const PROVIDERS: ProviderSeed[] = [
   {
     name: 'OpenAI',
     type: ProviderType.OPENAI,
@@ -71,7 +78,7 @@ const PROVIDERS = [
   },
 ];
 
-const MOCK_PROVIDER = {
+const MOCK_PROVIDER: ProviderSeed = {
   name: 'Mock (development)',
   type: ProviderType.MOCK,
   defaultModel: 'mock-echo',
@@ -132,7 +139,7 @@ async function seedAdmin(prisma: PrismaClient): Promise<void> {
 
 async function seedProvider(
   prisma: PrismaClient,
-  provider: (typeof PROVIDERS)[number],
+  provider: ProviderSeed,
   flags: { isEnabled: boolean; isDefault: boolean },
 ): Promise<void> {
   const existing = await prisma.aiProvider.findUnique({ where: { name: provider.name } });
