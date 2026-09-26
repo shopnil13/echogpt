@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { registerAs } from '@nestjs/config';
 
 import { envBool, envInt, envList, envOptionalString, envString } from './env.utils';
@@ -7,9 +10,11 @@ export type NodeEnv = 'development' | 'test' | 'production';
 export const appConfig = registerAs('app', () => ({
   nodeEnv: envString('NODE_ENV') as NodeEnv,
   port: envInt('PORT'),
-  /** Explicit APP_VERSION wins; npm sets npm_package_version when started through npm scripts. */
+  /** Explicit APP_VERSION wins, then npm's variable, then package.json in the working directory. */
   version:
-    envOptionalString('APP_VERSION') ?? envOptionalString('npm_package_version') ?? 'unknown',
+    envOptionalString('APP_VERSION') ??
+    envOptionalString('npm_package_version') ??
+    readPackageVersion(),
   publicUrl: envString('APP_PUBLIC_URL'),
   corsOrigins: envList('CORS_ORIGINS'),
   trustProxy: envBool('TRUST_PROXY'),
@@ -23,3 +28,14 @@ export const appConfig = registerAs('app', () => ({
 }));
 
 export type AppConfig = ReturnType<typeof appConfig>;
+
+function readPackageVersion(): string {
+  try {
+    const manifest = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')) as {
+      version?: string;
+    };
+    return manifest.version ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
