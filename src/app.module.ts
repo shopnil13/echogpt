@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AUTH_THROTTLE_KEY } from './common/decorators/auth.decorators';
@@ -17,6 +18,7 @@ import { validateEnv } from './config/env.validation';
 import { mailConfig } from './config/mail.config';
 import { aiConfig } from './config/ai.config';
 import { chatConfig } from './config/chat.config';
+import { searchConfig } from './config/search.config';
 import { LoggerModule } from './infrastructure/logger/logger.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
@@ -26,6 +28,8 @@ import { EmailVerifiedGuard } from './modules/auth/guards/email-verified.guard';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
 import { HealthModule } from './modules/health/health.module';
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { SearchModule } from './modules/search/search.module';
 import { QuotaGuard } from './modules/subscriptions/guards/quota.guard';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { UsageLogMiddleware } from './modules/usage-logs/middleware/usage-log.middleware';
@@ -42,7 +46,7 @@ function isAuthThrottled(context: ExecutionContext): boolean {
       isGlobal: true,
       cache: true,
       envFilePath: process.env.NODE_ENV === 'test' ? ['.env.test'] : ['.env'],
-      load: [appConfig, databaseConfig, authConfig, mailConfig, aiConfig, chatConfig],
+      load: [appConfig, databaseConfig, authConfig, mailConfig, aiConfig, chatConfig, searchConfig],
       validate: validateEnv,
     }),
     LoggerModule,
@@ -67,6 +71,9 @@ function isAuthThrottled(context: ExecutionContext): boolean {
     SubscriptionsModule,
     AiProvidersModule,
     ChatModule,
+    SearchModule,
+    ScheduleModule.forRoot(),
+    MaintenanceModule,
   ],
   // Global guards run in this order: rate limit, authentication, role check, email verification,
   // quota. Quota is last so rejected requests never consume allowance.
