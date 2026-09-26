@@ -1,11 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { DEFAULT_PLAN_CODE } from '../../../common/constants/plans.constants';
+import { type Paginated, paginate } from '../../../common/dto/pagination.dto';
 import { AppException } from '../../../common/errors/app.exception';
 import { ErrorCode } from '../../../common/errors/error-codes';
 import { PrismaService } from '../../../infrastructure/prisma/prisma.service';
+import { type AdminSubscriptionsQueryDto } from '../dto/admin/admin-subscriptions.query.dto';
 import {
   type SubscriptionWithPlan,
+  type SubscriptionWithUser,
   SubscriptionsRepository,
 } from '../repositories/subscriptions.repository';
 import { PlansService } from './plans.service';
@@ -37,6 +40,16 @@ export class SubscriptionsService {
     return this.prisma.$transaction((tx) =>
       this.subscriptionsRepository.create(userId, plan.id, new Date(), tx),
     );
+  }
+
+  async listForAdmin(query: AdminSubscriptionsQueryDto): Promise<Paginated<SubscriptionWithUser>> {
+    const [items, total] = await this.subscriptionsRepository.listForAdmin({
+      skip: query.skip,
+      take: query.limit,
+      planCode: query.planCode,
+      status: query.status,
+    });
+    return paginate(items, total, query);
   }
 
   history(userId: string): Promise<SubscriptionWithPlan[]> {

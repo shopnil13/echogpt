@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AdminSubscriptionsController } from './controllers/admin-subscriptions.controller';
 import { PlansController } from './controllers/plans.controller';
 import { SubscriptionsController } from './controllers/subscriptions.controller';
 import { QuotaGuard } from './guards/quota.guard';
@@ -11,7 +12,7 @@ import { QuotaService } from './services/quota.service';
 import { SubscriptionsService } from './services/subscriptions.service';
 
 @Module({
-  controllers: [PlansController, SubscriptionsController],
+  controllers: [PlansController, SubscriptionsController, AdminSubscriptionsController],
   providers: [
     PlansRepository,
     SubscriptionsRepository,

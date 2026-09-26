@@ -10,6 +10,22 @@ export type SubscriptionWithPlan = Prisma.SubscriptionGetPayload<{
   include: typeof subscriptionWithPlanInclude;
 }>;
 
+export const subscriptionWithUserInclude = {
+  plan: true,
+  user: { select: { id: true, email: true, fullName: true } },
+} satisfies Prisma.SubscriptionInclude;
+
+export type SubscriptionWithUser = Prisma.SubscriptionGetPayload<{
+  include: typeof subscriptionWithUserInclude;
+}>;
+
+export interface SubscriptionListQuery {
+  skip: number;
+  take: number;
+  planCode?: string;
+  status?: SubscriptionStatus;
+}
+
 @Injectable()
 export class SubscriptionsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -22,6 +38,23 @@ export class SubscriptionsRepository {
       where: { userId, status: SubscriptionStatus.ACTIVE },
       include: subscriptionWithPlanInclude,
     });
+  }
+
+  async listForAdmin(query: SubscriptionListQuery): Promise<[SubscriptionWithUser[], number]> {
+    const where: Prisma.SubscriptionWhereInput = {
+      ...(query.planCode ? { plan: { code: query.planCode } } : {}),
+      ...(query.status ? { status: query.status } : {}),
+    };
+    return this.prisma.$transaction([
+      this.prisma.subscription.findMany({
+        where,
+        include: subscriptionWithUserInclude,
+        orderBy: { createdAt: 'desc' },
+        skip: query.skip,
+        take: query.take,
+      }),
+      this.prisma.subscription.count({ where }),
+    ]);
   }
 
   listForUser(userId: string): Promise<SubscriptionWithPlan[]> {

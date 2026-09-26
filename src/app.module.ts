@@ -21,6 +21,7 @@ import { chatConfig } from './config/chat.config';
 import { searchConfig } from './config/search.config';
 import { LoggerModule } from './infrastructure/logger/logger.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ChatModule } from './modules/chat/chat.module';
@@ -74,6 +75,7 @@ function isAuthThrottled(context: ExecutionContext): boolean {
     SearchModule,
     ScheduleModule.forRoot(),
     MaintenanceModule,
+    AdminModule,
   ],
   // Global guards run in this order: rate limit, authentication, role check, email verification,
   // quota. Quota is last so rejected requests never consume allowance.
