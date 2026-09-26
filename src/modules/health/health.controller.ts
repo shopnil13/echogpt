@@ -13,6 +13,8 @@ import {
   MemoryHealthIndicator,
 } from '@nestjs/terminus';
 
+import { PrismaHealthIndicator } from '../../infrastructure/prisma/prisma-health.indicator';
+
 const HEAP_LIMIT_BYTES = 512 * 1024 * 1024;
 
 @ApiTags('Health')
@@ -22,6 +24,7 @@ export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
     private readonly memory: MemoryHealthIndicator,
+    private readonly database: PrismaHealthIndicator,
   ) {}
 
   @Get()
@@ -42,6 +45,9 @@ export class HealthController {
   })
   @ApiServiceUnavailableResponse({ description: 'One or more dependencies are unhealthy' })
   ready(): Promise<HealthCheckResult> {
-    return this.health.check([() => this.memory.checkHeap('memory_heap', HEAP_LIMIT_BYTES)]);
+    return this.health.check([
+      () => this.database.pingCheck('database'),
+      () => this.memory.checkHeap('memory_heap', HEAP_LIMIT_BYTES),
+    ]);
   }
 }
