@@ -1,6 +1,7 @@
 # Local development stack.
 #   docker compose up -d postgres     -> database only (run the API with npm run start:dev)
-#   docker compose up --build         -> database + API container
+#   docker compose --profile app up --build
+#                                     -> database, migrations + seed job, API container
 name: echogpt
 
 services:
@@ -22,12 +23,28 @@ services:
       timeout: 3s
       retries: 10
 
+  # One-off job: applies committed migrations and the idempotent seed, then exits.
+  migrate:
+    build:
+      context: .
+      target: build
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://echogpt:echogpt@postgres:5432/echogpt?schema=public
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts"
+    profiles: ['app']
+
   api:
     build: .
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     env_file: .env
     environment:
       NODE_ENV: production
