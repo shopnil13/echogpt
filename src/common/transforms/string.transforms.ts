@@ -17,3 +17,8 @@ export function NormalizeEmail(): PropertyDecorator {
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
+
+/** Trims and lower-cases string input (codes, slugs). */
+export function TrimLowercase(): PropertyDecorator {
+  return NormalizeEmail();
+}
