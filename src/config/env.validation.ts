@@ -17,7 +17,12 @@ export const envValidationSchema = Joi.object({
   BODY_LIMIT: Joi.string()
     .pattern(/^\d+(kb|mb)$/i)
     .default('100kb'),
-  SWAGGER_ENABLED: Joi.boolean().default(true),
+  // Public API docs are opt-in in production.
+  SWAGGER_ENABLED: Joi.boolean().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.boolean().default(false),
+    otherwise: Joi.boolean().default(true),
+  }),
   LOG_LEVEL: Joi.string()
     .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent')
     .default('info'),

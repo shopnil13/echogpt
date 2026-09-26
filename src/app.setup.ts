@@ -30,7 +30,14 @@ export function configureApp(app: NestExpressApplication): void {
   app.useBodyParser('json', { limit: config.bodyLimit });
   app.useBodyParser('urlencoded', { limit: config.bodyLimit, extended: false });
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        // Upgrading to https breaks Swagger UI assets on plain-http local and docker setups.
+        directives: { upgradeInsecureRequests: config.nodeEnv === 'production' ? [] : null },
+      },
+    }),
+  );
   app.enableCors({
     origin: config.corsOrigins.length > 0 ? config.corsOrigins : false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

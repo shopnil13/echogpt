@@ -1,6 +1,6 @@
 {
   "name": "echogpt-backend",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Backend REST API for the EchoGPT multi-AI chat Chrome extension",
   "author": "Chowdhury Rifat Ahmad Shopnil",
   "license": "MIT",
@@ -31,7 +31,9 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
-    "verify": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run build"
+    "verify": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run build",
+    "openapi:export": "npm run build && node dist/cli/export-openapi.js docs/openapi.json",
+    "postman:export": "npm run openapi:export && openapi2postmanv2 -s docs/openapi.json -o postman/echogpt.postman_collection.json -p -O folderStrategy=Tags,requestParametersResolution=Example && node scripts/finalize-postman.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
@@ -85,6 +87,7 @@
     "husky": "^9.1.7",
     "jest": "^30.5.2",
     "lint-staged": "^17.6.0",
+    "openapi-to-postmanv2": "^6.3.3",
     "pino-pretty": "^13.1.3",
     "prettier": "^3.9.9",
     "prisma": "^7.10.0",
@@ -135,6 +138,7 @@
     ]
   },
   "overrides": {
-    "mysql2": "^3.24.4"
+    "mysql2": "^3.24.4",
+    "deepmerge-ts": "^8.0.2"
   }
 }

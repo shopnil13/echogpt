@@ -1,6 +1,7 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpStatus } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
+import { ApiErrorResponses } from '../../../common/decorators/api-error-responses.decorator';
 import { Public } from '../../../common/decorators/auth.decorators';
 import { PlanResponseDto } from '../dto/responses/plan.response.dto';
 import { toPlanResponse } from '../mappers/subscription.mapper';
@@ -18,6 +19,7 @@ export class PlansController {
     description: 'Public. Prices and request limits of active plans.',
   })
   @ApiOkResponse({ type: PlanResponseDto, isArray: true })
+  @ApiErrorResponses(HttpStatus.TOO_MANY_REQUESTS)
   async list(): Promise<PlanResponseDto[]> {
     const plans = await this.plansService.listActive();
     return plans.map(toPlanResponse);
