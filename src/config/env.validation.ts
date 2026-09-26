@@ -56,6 +56,11 @@ export const envValidationSchema = Joi.object({
   AI_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).max(600_000).default(60_000),
   AI_HEALTH_CHECK_TIMEOUT_MS: Joi.number().integer().min(500).max(60_000).default(10_000),
   AI_MAX_OUTPUT_TOKENS: Joi.number().integer().min(64).max(128_000).default(16_000),
+  CHAT_CONTEXT_MESSAGES: Joi.number().integer().min(0).max(200).default(20),
+  CHAT_SYSTEM_PROMPT: Joi.string()
+    .max(4000)
+    .default('You are EchoGPT, a helpful, accurate and concise assistant.'),
+  CHAT_STREAM_HEARTBEAT_MS: Joi.number().integer().min(1000).max(60_000).default(15_000),
   THROTTLE_TTL_SECONDS: Joi.number().integer().min(1).default(60),
   THROTTLE_LIMIT: Joi.number().integer().min(1).default(100),
 });
