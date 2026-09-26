@@ -5,8 +5,8 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { AppException } from '../../../common/errors/app.exception';
 import { type AuthenticatedUser } from '../../../common/types/authenticated-user';
 import { authConfig, type AuthConfig } from '../../../config/auth.config';
-import { SessionService } from '../services/session.service';
-import { type AccessTokenPayload } from '../services/token.service';
+import { SessionService } from '../../sessions/services/session.service';
+import { type AccessTokenPayload } from '../../sessions/services/token.service';
 
 /**
  * Verifies the JWT signature and claims, then confirms the bound session is still active.

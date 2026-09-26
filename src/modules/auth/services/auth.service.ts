@@ -19,8 +19,8 @@ import { type LoginDto } from '../dto/login.dto';
 import { type RegisterDto } from '../dto/register.dto';
 import { type AuthTokensResponseDto } from '../dto/responses/auth-tokens.response.dto';
 import { EmailVerificationService } from './email-verification.service';
-import { type IssuedSession, SessionService } from './session.service';
-import { TokenService } from './token.service';
+import { type IssuedSession, SessionService } from '../../sessions/services/session.service';
+import { TokenService } from '../../sessions/services/token.service';
 
 export interface AuthResult {
   user: UserProfileRecord;
