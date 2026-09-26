@@ -1,0 +1,58 @@
+# Local development stack.
+#   docker compose up -d postgres     -> database only (run the API with npm run start:dev)
+#   docker compose --profile app up --build
+#                                     -> database, migrations + seed job, API container
+name: echogpt
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: echogpt
+      POSTGRES_PASSWORD: echogpt
+      POSTGRES_DB: echogpt
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5434}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/10-create-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U echogpt -d echogpt']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # One-off job: applies committed migrations and the idempotent seed, then exits.
+  migrate:
+    build:
+      context: .
+      target: build
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://echogpt:echogpt@postgres:5432/echogpt?schema=public
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts"
+    profiles: ['app']
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://echogpt:echogpt@postgres:5432/echogpt?schema=public
+    ports:
+      - '127.0.0.1:${API_PORT:-3000}:3000'
+    profiles: ['app']
+
+volumes:
+  postgres-data:
