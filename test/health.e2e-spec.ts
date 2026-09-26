@@ -27,6 +27,7 @@ describe('Health and HTTP pipeline (e2e)', () => {
     const response = await request(app.getHttpServer()).get('/api/v1/health/ready').expect(200);
 
     expect(response.body.status).toBe('ok');
+    expect(response.body.info.database.status).toBe('up');
   });
 
   it('returns the standard error envelope and echoes a client request id', async () => {
