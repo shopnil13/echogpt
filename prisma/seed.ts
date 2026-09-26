@@ -11,6 +11,8 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PlanCode } from '../src/common/constants/plans.constants';
 import { RoleName } from '../src/common/constants/roles.constants';
 import { LimitPeriod, PrismaClient, ProviderType } from '../src/generated/prisma/client';
+import { type AiConfig } from '../src/config/ai.config';
+import { EncryptionService } from '../src/infrastructure/crypto/encryption.service';
 import { hashPassword } from '../src/infrastructure/security/password-hashing';
 
 const MIN_ADMIN_PASSWORD_LENGTH = 12;
@@ -39,10 +41,12 @@ const PLANS = [
   },
 ];
 
-/** Real providers start disabled: an admin must add an API key before enabling them. */
+/** Real providers start disabled unless a SEED_*_API_KEY is provided; admins can add keys later. */
 interface ProviderSeed {
   name: string;
   type: ProviderType;
+  /** Optional env var holding an API key; when set the provider is stored encrypted and enabled. */
+  apiKeyEnv?: string;
   defaultModel: string;
   models: Array<{ name: string; displayName: string }>;
 }
@@ -51,6 +55,7 @@ const PROVIDERS: ProviderSeed[] = [
   {
     name: 'OpenAI',
     type: ProviderType.OPENAI,
+    apiKeyEnv: 'SEED_OPENAI_API_KEY',
     defaultModel: 'gpt-5-mini',
     models: [
       { name: 'gpt-5-mini', displayName: 'GPT-5 mini' },
@@ -60,16 +65,18 @@ const PROVIDERS: ProviderSeed[] = [
   {
     name: 'Anthropic Claude',
     type: ProviderType.ANTHROPIC,
-    defaultModel: 'claude-sonnet-5',
+    apiKeyEnv: 'SEED_ANTHROPIC_API_KEY',
+    defaultModel: 'claude-opus-5',
     models: [
+      { name: 'claude-opus-5', displayName: 'Claude Opus 5' },
       { name: 'claude-sonnet-5', displayName: 'Claude Sonnet 5' },
-      { name: 'claude-opus-5-5', displayName: 'Claude Opus 5.5' },
-      { name: 'claude-haiku-4-5-20251001', displayName: 'Claude Haiku 4.5' },
+      { name: 'claude-haiku-4-5', displayName: 'Claude Haiku 4.5' },
     ],
   },
   {
     name: 'Google Gemini',
     type: ProviderType.GEMINI,
+    apiKeyEnv: 'SEED_GEMINI_API_KEY',
     defaultModel: 'gemini-2.5-flash',
     models: [
       { name: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash' },
@@ -141,29 +148,48 @@ async function seedProvider(
   prisma: PrismaClient,
   provider: ProviderSeed,
   flags: { isEnabled: boolean; isDefault: boolean },
+  encryption: EncryptionService,
 ): Promise<void> {
   const existing = await prisma.aiProvider.findUnique({ where: { name: provider.name } });
   if (existing) return;
+
+  const apiKey = provider.apiKeyEnv ? process.env[provider.apiKeyEnv]?.trim() : undefined;
+  const isEnabled = flags.isEnabled || Boolean(apiKey);
   await prisma.aiProvider.create({
     data: {
       name: provider.name,
       type: provider.type,
       defaultModel: provider.defaultModel,
-      ...flags,
+      isEnabled,
+      isDefault: flags.isDefault && isEnabled,
+      ...(apiKey
+        ? { apiKeyEncrypted: encryption.encrypt(apiKey), apiKeyLast4: apiKey.slice(-4) }
+        : {}),
       models: { create: provider.models },
     },
   });
-  log(`provider ${provider.name} created (enabled=${flags.isEnabled}, default=${flags.isDefault})`);
+  log(
+    `provider ${provider.name} created (enabled=${isEnabled}, default=${flags.isDefault && isEnabled})`,
+  );
+}
+
+async function hasDefaultProvider(prisma: PrismaClient): Promise<boolean> {
+  return (await prisma.aiProvider.count({ where: { isDefault: true } })) > 0;
 }
 
 async function seedProviders(prisma: PrismaClient): Promise<void> {
+  const encryption = new EncryptionService({
+    encryptionKey: Buffer.from(requireEnv('ENCRYPTION_KEY'), 'base64'),
+  } as AiConfig);
+
   for (const provider of PROVIDERS) {
-    await seedProvider(prisma, provider, { isEnabled: false, isDefault: false });
+    const isDefault = !(await hasDefaultProvider(prisma));
+    await seedProvider(prisma, provider, { isEnabled: false, isDefault }, encryption);
   }
 
   if (process.env.AI_MOCK_PROVIDER_ENABLED === 'true') {
-    const hasDefault = (await prisma.aiProvider.count({ where: { isDefault: true } })) > 0;
-    await seedProvider(prisma, MOCK_PROVIDER, { isEnabled: true, isDefault: !hasDefault });
+    const isDefault = !(await hasDefaultProvider(prisma));
+    await seedProvider(prisma, MOCK_PROVIDER, { isEnabled: true, isDefault }, encryption);
   }
 }
 
