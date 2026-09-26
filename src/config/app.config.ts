@@ -1,12 +1,15 @@
 import { registerAs } from '@nestjs/config';
 
-import { envBool, envInt, envList, envString } from './env.utils';
+import { envBool, envInt, envList, envOptionalString, envString } from './env.utils';
 
 export type NodeEnv = 'development' | 'test' | 'production';
 
 export const appConfig = registerAs('app', () => ({
   nodeEnv: envString('NODE_ENV') as NodeEnv,
   port: envInt('PORT'),
+  /** Explicit APP_VERSION wins; npm sets npm_package_version when started through npm scripts. */
+  version:
+    envOptionalString('APP_VERSION') ?? envOptionalString('npm_package_version') ?? 'unknown',
   publicUrl: envString('APP_PUBLIC_URL'),
   corsOrigins: envList('CORS_ORIGINS'),
   trustProxy: envBool('TRUST_PROXY'),
