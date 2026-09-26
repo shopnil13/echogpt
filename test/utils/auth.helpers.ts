@@ -55,3 +55,9 @@ export async function login(
 export function bearer(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
 }
+
+export const TEST_ADMIN = { email: 'admin@echogpt.test', password: 'Test!Admin-Password-2026' };
+
+export function loginAdmin(app: INestApplication): Promise<TestSession> {
+  return login(app, TEST_ADMIN.email, TEST_ADMIN.password);
+}
