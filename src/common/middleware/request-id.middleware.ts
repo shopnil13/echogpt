@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+import { RequestContext } from '../context/request-context';
+
 export const REQUEST_ID_HEADER = 'x-request-id';
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{8,128}$/;
 
@@ -20,12 +22,15 @@ export function resolveRequestId(req: RequestWithId, res: ServerResponse): strin
   return requestId;
 }
 
-/** Registered first so even body-parser failures carry a request ID. */
+/**
+ * Registered first so even body-parser failures carry a request ID. Also opens the
+ * per-request async context used for usage logging.
+ */
 export function requestIdMiddleware(
   req: RequestWithId,
   res: ServerResponse,
   next: () => void,
 ): void {
-  resolveRequestId(req, res);
-  next();
+  const requestId = resolveRequestId(req, res);
+  RequestContext.run({ requestId, usage: {} }, next);
 }

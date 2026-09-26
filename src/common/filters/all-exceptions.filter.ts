@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 
+import { RequestContext } from '../context/request-context';
 import type { ErrorResponseDto } from '../dto/error-response.dto';
 import {
   type ErrorMapper,
@@ -39,6 +40,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const mapped = this.map(exception);
     const requestId = resolveRequestId(request, response);
 
+    RequestContext.setErrorCode(mapped.code);
     this.log(exception, mapped, request, requestId);
 
     // Streaming responses (SSE) have already sent headers; the stream handler reports errors itself.
