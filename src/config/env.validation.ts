@@ -61,6 +61,19 @@ export const envValidationSchema = Joi.object({
     .max(4000)
     .default('You are EchoGPT, a helpful, accurate and concise assistant.'),
   CHAT_STREAM_HEARTBEAT_MS: Joi.number().integer().min(1000).max(60_000).default(15_000),
+  SEARCH_ENGINE: Joi.string().valid('mock', 'tavily').default('mock'),
+  TAVILY_API_KEY: Joi.when('SEARCH_ENGINE', {
+    is: 'tavily',
+    then: Joi.string().min(10).required(),
+    otherwise: Joi.string().allow(''),
+  }),
+  SEARCH_CACHE_TTL_SECONDS: Joi.number()
+    .integer()
+    .min(0)
+    .max(86_400 * 7)
+    .default(3600),
+  SEARCH_TIMEOUT_MS: Joi.number().integer().min(1000).max(60_000).default(10_000),
+  SEARCH_SUGGESTION_MIN_USERS: Joi.number().integer().min(1).default(3),
   THROTTLE_TTL_SECONDS: Joi.number().integer().min(1).default(60),
   THROTTLE_LIMIT: Joi.number().integer().min(1).default(100),
 });
