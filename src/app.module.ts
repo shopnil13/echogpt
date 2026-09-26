@@ -16,10 +16,12 @@ import { databaseConfig } from './config/database.config';
 import { validateEnv } from './config/env.validation';
 import { mailConfig } from './config/mail.config';
 import { aiConfig } from './config/ai.config';
+import { chatConfig } from './config/chat.config';
 import { LoggerModule } from './infrastructure/logger/logger.module';
 import { PrismaModule } from './infrastructure/prisma/prisma.module';
 import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { EmailVerifiedGuard } from './modules/auth/guards/email-verified.guard';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from './modules/auth/guards/roles.guard';
@@ -40,7 +42,7 @@ function isAuthThrottled(context: ExecutionContext): boolean {
       isGlobal: true,
       cache: true,
       envFilePath: process.env.NODE_ENV === 'test' ? ['.env.test'] : ['.env'],
-      load: [appConfig, databaseConfig, authConfig, mailConfig, aiConfig],
+      load: [appConfig, databaseConfig, authConfig, mailConfig, aiConfig, chatConfig],
       validate: validateEnv,
     }),
     LoggerModule,
@@ -64,6 +66,7 @@ function isAuthThrottled(context: ExecutionContext): boolean {
     AuthModule,
     SubscriptionsModule,
     AiProvidersModule,
+    ChatModule,
   ],
   // Global guards run in this order: rate limit, authentication, role check, email verification,
   // quota. Quota is last so rejected requests never consume allowance.
