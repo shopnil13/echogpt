@@ -42,7 +42,7 @@ import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { toAuthResponse, toSessionResponse } from '../mappers/auth.mapper';
 import { AuthService } from '../services/auth.service';
 import { EmailVerificationService } from '../services/email-verification.service';
-import { SessionService } from '../services/session.service';
+import { SessionService } from '../../sessions/services/session.service';
 
 @ApiTags('Auth')
 @Controller('auth')

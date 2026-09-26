@@ -88,6 +88,22 @@ export class UsersRepository {
     await db.user.update({ where: { id }, data: { emailVerifiedAt: new Date() } });
   }
 
+  updateProfile(
+    id: string,
+    data: { fullName?: string; avatarUrl?: string | null },
+  ): Promise<UserProfileRecord> {
+    return this.prisma.user.update({ where: { id }, data, select: userProfileSelect });
+  }
+
+  /** Hard delete; owned rows cascade and usage logs are anonymized by the FK (ADR-013). */
+  async delete(id: string): Promise<void> {
+    await this.prisma.user.delete({ where: { id } });
+  }
+
+  countByRole(role: RoleName): Promise<number> {
+    return this.prisma.user.count({ where: { role: { name: role } } });
+  }
+
   async updateStatus(id: string, status: UserStatus, db: DbClient = this.prisma): Promise<void> {
     await db.user.update({ where: { id }, data: { status } });
   }
