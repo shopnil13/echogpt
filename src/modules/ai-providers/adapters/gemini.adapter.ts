@@ -12,6 +12,13 @@ import {
 import { AiProviderError, classifyHttpStatus } from './ai-provider.error';
 
 const BLOCKED_FINISH_REASONS = new Set(['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII']);
+/** Same budget as the other adapters. Unlike those SDKs, @google/genai does not retry unless asked. */
+const SDK_MAX_RETRIES = 1;
+/**
+ * The SDK's default list without 429: Gemini sends 429 when a key's quota is used up, and
+ * retrying a second later only spends more of it.
+ */
+const RETRYABLE_STATUS_CODES = [408, 500, 502, 503, 504];
 
 @Injectable()
 export class GeminiAdapter implements AiProviderAdapter {
@@ -83,6 +90,8 @@ export class GeminiAdapter implements AiProviderAdapter {
       apiKey: config.apiKey ?? undefined,
       httpOptions: {
         timeout: config.timeoutMs,
+        // Retries happen on the status, before any body is read, so a stream never repeats text.
+        retryOptions: { attempts: SDK_MAX_RETRIES + 1, httpStatusCodes: RETRYABLE_STATUS_CODES },
         ...(config.baseUrl ? { baseUrl: config.baseUrl } : {}),
       },
     });
