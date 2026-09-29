@@ -6,6 +6,13 @@ const REQUIRED = {
   ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
 };
 
+const PRODUCTION = {
+  ...REQUIRED,
+  NODE_ENV: 'production',
+  MAIL_TRANSPORT: 'smtp',
+  SMTP_HOST: 'smtp.example.com',
+};
+
 describe('validateEnv', () => {
   it('applies defaults', () => {
     const env = validateEnv({ ...REQUIRED });
@@ -18,10 +25,18 @@ describe('validateEnv', () => {
   });
 
   it('disables Swagger by default in production', () => {
-    expect(validateEnv({ ...REQUIRED, NODE_ENV: 'production' }).SWAGGER_ENABLED).toBe(false);
-    expect(
-      validateEnv({ ...REQUIRED, NODE_ENV: 'production', SWAGGER_ENABLED: 'true' }).SWAGGER_ENABLED,
-    ).toBe(true);
+    expect(validateEnv({ ...PRODUCTION }).SWAGGER_ENABLED).toBe(false);
+    expect(validateEnv({ ...PRODUCTION, SWAGGER_ENABLED: 'true' }).SWAGGER_ENABLED).toBe(true);
+  });
+
+  it('requires the SMTP mail transport in production', () => {
+    const production = { ...REQUIRED, NODE_ENV: 'production' };
+    expect(() => validateEnv(production)).toThrow(/MAIL_TRANSPORT" must be smtp in production/);
+    expect(() => validateEnv({ ...production, MAIL_TRANSPORT: 'log' })).toThrow(
+      /MAIL_TRANSPORT" must be smtp in production/,
+    );
+    expect(validateEnv({ ...PRODUCTION }).MAIL_TRANSPORT).toBe('smtp');
+    expect(validateEnv({ ...REQUIRED }).MAIL_TRANSPORT).toBe('log');
   });
 
   it('lists every problem at once', () => {
