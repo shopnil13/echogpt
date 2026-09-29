@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, type OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
 
 import { ErrorResponseDto } from '../../common/dto/error-response.dto';
+import { appConfig, type AppConfig } from '../../config/app.config';
 
 export const SWAGGER_PATH = 'api/docs';
 export const ACCESS_TOKEN_SECURITY = 'access-token';
@@ -20,7 +21,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         '**Tracing:** send `x-request-id` to correlate logs; it is echoed back on every response.',
       ].join('\n'),
     )
-    .setVersion('1.0.0')
+    .setVersion(app.get<AppConfig>(appConfig.KEY).version)
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, ACCESS_TOKEN_SECURITY)
     .build();
 
