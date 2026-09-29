@@ -1,6 +1,6 @@
 {
   "name": "echogpt-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Backend REST API for the EchoGPT multi-AI chat Chrome extension",
   "author": "Chowdhury Rifat Ahmad Shopnil",
   "license": "MIT",
