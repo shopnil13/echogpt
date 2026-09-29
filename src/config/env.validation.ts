@@ -40,7 +40,15 @@ export const envValidationSchema = Joi.object({
   EMAIL_VERIFICATION_URL: Joi.string()
     .uri({ scheme: ['http', 'https'] })
     .default('http://localhost:3000/verify-email'),
-  MAIL_TRANSPORT: Joi.string().valid('log', 'smtp').default('log'),
+  // The log transport writes one-time verification tokens to the logs, so production must send.
+  MAIL_TRANSPORT: Joi.string().when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().valid('smtp').required().messages({
+      'any.only': '"MAIL_TRANSPORT" must be smtp in production',
+      'any.required': '"MAIL_TRANSPORT" must be smtp in production',
+    }),
+    otherwise: Joi.string().valid('log', 'smtp').default('log'),
+  }),
   MAIL_FROM: Joi.string().default('EchoGPT <no-reply@echogpt.local>'),
   SMTP_HOST: Joi.when('MAIL_TRANSPORT', {
     is: 'smtp',
