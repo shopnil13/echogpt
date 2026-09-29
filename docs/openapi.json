@@ -5480,7 +5480,7 @@
   "info": {
     "title": "EchoGPT API",
     "description": "REST API for the EchoGPT multi-AI chat Chrome extension.\n\n**Authentication:** call `POST /auth/login`, then send `Authorization: Bearer <accessToken>`.\nRefresh with `POST /auth/refresh` before the access token expires.\n\n**Errors** always use the `ErrorResponseDto` envelope with a stable `code`.\n**Tracing:** send `x-request-id` to correlate logs; it is echoed back on every response.",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "contact": {}
   },
   "tags": [],
