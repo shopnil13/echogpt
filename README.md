@@ -42,13 +42,14 @@ cp .env.example .env
 docker compose --profile app up --build
 ```
 
-This starts PostgreSQL, runs a one-off job that applies the migrations and seeds reference data, then starts the API.
+This starts PostgreSQL, runs a one-off job that applies the migrations and seeds reference data, then starts the API and a Mailpit inbox that catches every email the API sends.
 
-| URL                                       | What             |
-| ----------------------------------------- | ---------------- |
-| http://localhost:3000/api/docs            | Swagger UI       |
-| http://localhost:3000/api/docs-json       | OpenAPI document |
-| http://localhost:3000/api/v1/health/ready | Readiness probe  |
+| URL                                       | What                                |
+| ----------------------------------------- | ----------------------------------- |
+| http://localhost:3000/api/docs            | Swagger UI                          |
+| http://localhost:3000/api/docs-json       | OpenAPI document                    |
+| http://localhost:3000/api/v1/health/ready | Readiness probe                     |
+| http://localhost:8025                     | Mailpit inbox (verification emails) |
 
 Seeded admin account (from `.env`): `admin@echogpt.local` / `ChangeMe!Admin2026`. Change it before sharing any environment.
 
@@ -101,29 +102,37 @@ curl -s $API/subscriptions/me/usage -H "authorization: Bearer $TOKEN" | jq
 
 **Using real AI providers:** sign in as admin, then `PATCH /admin/providers/{id}` with an `apiKey` and `PATCH /admin/providers/{id}/status` with `{"isEnabled": true}`. Alternatively, set `SEED_OPENAI_API_KEY`, `SEED_ANTHROPIC_API_KEY` or `SEED_GEMINI_API_KEY` before the first seed. `POST /admin/providers/{id}/health-check` verifies a key without spending tokens. Set `SEARCH_ENGINE=tavily` and `TAVILY_API_KEY` for real web results.
 
+**Email verification:** registering sends a verification email. With Docker it arrives in the Mailpit inbox (http://localhost:8025). With `npm run start:dev` (`MAIL_TRANSPORT=log`) it is printed to the application log. The link points at `EMAIL_VERIFICATION_URL`, the client page (for example in the extension) that reads `?token=` and calls the API. This repository has no such page, so copy the token from the link and send it yourself:
+
+```bash
+curl -s $API/auth/verify-email -H 'content-type: application/json' -d '{"token":"<token from the link>"}'
+```
+
+`POST /auth/resend-verification` (signed in) issues a new link and invalidates the old one. Set `REQUIRE_EMAIL_VERIFICATION=true` to block chat and search for unverified accounts.
+
 The mock provider understands two markers for exercising failure paths: `[mock:fail]` (upstream error) and `[mock:refuse]` (model refusal).
 
 ## Configuration
 
 All variables are validated at boot (`src/config/env.validation.ts`); `.env.example` documents each one.
 
-| Variable                                            | Default                            | Purpose                                                       |
-| --------------------------------------------------- | ---------------------------------- | ------------------------------------------------------------- |
-| `DATABASE_URL`                                      | required                           | PostgreSQL connection string                                  |
-| `JWT_ACCESS_SECRET`                                 | required                           | HS256 secret, at least 32 characters                          |
-| `ENCRYPTION_KEY`                                    | required                           | 32-byte base64 key encrypting provider API keys (AES-256-GCM) |
-| `JWT_ACCESS_TTL_SECONDS` / `REFRESH_TOKEN_TTL_DAYS` | `900` / `30`                       | Token lifetimes                                               |
-| `CORS_ORIGINS`                                      | empty (CORS off)                   | Allowlist, e.g. `chrome-extension://<extension-id>`           |
-| `TRUST_PROXY`                                       | `false`                            | Set behind a load balancer so client IPs are correct          |
-| `SWAGGER_ENABLED`                                   | `true`, `false` in production      | Expose `/api/docs`                                            |
-| `REQUIRE_EMAIL_VERIFICATION`                        | `false`                            | Block chat and search until the email is verified             |
-| `MAIL_TRANSPORT`                                    | `log`                              | `log` prints emails (development), `smtp` sends them          |
-| `AI_MOCK_PROVIDER_ENABLED`                          | `false` (`true` in `.env.example`) | Allow the keyless mock provider                               |
-| `AI_REQUEST_TIMEOUT_MS` / `AI_MAX_OUTPUT_TOKENS`    | `60000` / `16000`                  | Provider call limits                                          |
-| `CHAT_CONTEXT_MESSAGES`                             | `20`                               | Previous messages sent as context                             |
-| `SEARCH_ENGINE` / `TAVILY_API_KEY`                  | `mock`                             | Web search backend                                            |
-| `SEARCH_CACHE_TTL_SECONDS`                          | `3600`                             | Shared result cache lifetime (0 disables)                     |
-| `THROTTLE_LIMIT` / `AUTH_THROTTLE_LIMIT`            | `100` / `10` per minute            | Rate limits (global / auth routes)                            |
+| Variable                                            | Default                             | Purpose                                                       |
+| --------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------- |
+| `DATABASE_URL`                                      | required                            | PostgreSQL connection string                                  |
+| `JWT_ACCESS_SECRET`                                 | required                            | HS256 secret, at least 32 characters                          |
+| `ENCRYPTION_KEY`                                    | required                            | 32-byte base64 key encrypting provider API keys (AES-256-GCM) |
+| `JWT_ACCESS_TTL_SECONDS` / `REFRESH_TOKEN_TTL_DAYS` | `900` / `30`                        | Token lifetimes                                               |
+| `CORS_ORIGINS`                                      | empty (CORS off)                    | Allowlist, e.g. `chrome-extension://<extension-id>`           |
+| `TRUST_PROXY`                                       | `false`                             | Set behind a load balancer so client IPs are correct          |
+| `SWAGGER_ENABLED`                                   | `true`, `false` in production       | Expose `/api/docs`                                            |
+| `REQUIRE_EMAIL_VERIFICATION`                        | `false`                             | Block chat and search until the email is verified             |
+| `MAIL_TRANSPORT`                                    | `log`; must be `smtp` in production | `log` prints emails (development), `smtp` sends them          |
+| `AI_MOCK_PROVIDER_ENABLED`                          | `false` (`true` in `.env.example`)  | Allow the keyless mock provider                               |
+| `AI_REQUEST_TIMEOUT_MS` / `AI_MAX_OUTPUT_TOKENS`    | `60000` / `16000`                   | Provider call limits                                          |
+| `CHAT_CONTEXT_MESSAGES`                             | `20`                                | Previous messages sent as context                             |
+| `SEARCH_ENGINE` / `TAVILY_API_KEY`                  | `mock`                              | Web search backend                                            |
+| `SEARCH_CACHE_TTL_SECONDS`                          | `3600`                              | Shared result cache lifetime (0 disables)                     |
+| `THROTTLE_LIMIT` / `AUTH_THROTTLE_LIMIT`            | `100` / `10` per minute             | Rate limits (global / auth routes)                            |
 
 ## Architecture
 
@@ -195,7 +204,7 @@ Design points: UUIDv7 keys, `timestamptz` everywhere, every foreign key indexed 
 - **Abuse limits:** global and stricter auth rate limits, plan quotas, body-size limit, prompt and page-size caps, provider timeouts.
 - **SSRF:** provider base URLs must be HTTPS and must not resolve to private or loopback addresses; the search endpoint is fixed in code.
 - **Privacy:** other users' queries appear in search suggestions only after several distinct users searched them. Search results sent to the model for summaries are delimited as untrusted data.
-- **Hardening:** helmet headers, CORS allowlist, no stack traces in responses, secret redaction in logs, Swagger off by default in production, non-root Docker image, `npm audit` clean.
+- **Hardening:** helmet headers, CORS allowlist, no stack traces in responses, secret redaction in logs, Swagger off by default in production, boot refuses the log mail transport in production (it would write one-time tokens to the logs), non-root Docker image, `npm audit` clean.
 
 ## Testing
 
