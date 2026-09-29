@@ -100,7 +100,7 @@ curl -s $API/search -H "authorization: Bearer $TOKEN" -H 'content-type: applicat
 curl -s $API/subscriptions/me/usage -H "authorization: Bearer $TOKEN" | jq
 ```
 
-**Using real AI providers:** sign in as admin, then `PATCH /admin/providers/{id}` with an `apiKey` and `PATCH /admin/providers/{id}/status` with `{"isEnabled": true}`. Alternatively, set `SEED_OPENAI_API_KEY`, `SEED_ANTHROPIC_API_KEY` or `SEED_GEMINI_API_KEY` before the first seed. `POST /admin/providers/{id}/health-check` verifies a key without spending tokens. Set `SEARCH_ENGINE=tavily` and `TAVILY_API_KEY` for real web results.
+**Using real AI providers:** sign in as admin, then `PATCH /admin/providers/{id}` with an `apiKey` and `PATCH /admin/providers/{id}/status` with `{"isEnabled": true}`. Alternatively, set `SEED_OPENAI_API_KEY`, `SEED_ANTHROPIC_API_KEY` or `SEED_GEMINI_API_KEY` before the first seed. `POST /admin/providers/{id}/health-check` verifies a key without spending tokens. Set `SEARCH_ENGINE=tavily` and `TAVILY_API_KEY` for real web results. A free-tier Gemini key works with the default `gemini-2.5-flash`, but Google allows only 20 requests per model per day on that tier, and Pro models need a paid tier. When the upstream quota runs out, the API answers `PROVIDER_RATE_LIMITED` and refunds the request.
 
 **Email verification:** registering sends a verification email. With Docker it arrives in the Mailpit inbox (http://localhost:8025). With `npm run start:dev` (`MAIL_TRANSPORT=log`) it is printed to the application log. The link points at `EMAIL_VERIFICATION_URL`, the client page (for example in the extension) that reads `?token=` and calls the API. This repository has no such page, so copy the token from the link and send it yourself:
 

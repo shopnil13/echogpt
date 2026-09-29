@@ -77,10 +77,15 @@ const PROVIDERS: ProviderSeed[] = [
     name: 'Google Gemini',
     type: ProviderType.GEMINI,
     apiKeyEnv: 'SEED_GEMINI_API_KEY',
+    // Gemini 2.5 Pro and Flash-Lite are closed to new API keys. 2.5 Flash stays the default because
+    // it was the most reliable in live tests; the 3.x Flash models often answered 503 (high demand).
+    // Free-tier keys get 20 requests per model per day. Pro models need a paid tier.
     defaultModel: 'gemini-2.5-flash',
     models: [
       { name: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash' },
-      { name: 'gemini-2.5-pro', displayName: 'Gemini 2.5 Pro' },
+      { name: 'gemini-3.5-flash', displayName: 'Gemini 3.5 Flash' },
+      { name: 'gemini-3.8-flash', displayName: 'Gemini 3.8 Flash' },
+      { name: 'gemini-3.1-pro-preview', displayName: 'Gemini 3.1 Pro Preview' },
     ],
   },
 ];

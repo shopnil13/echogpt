@@ -7,6 +7,7 @@ import {
 } from '../interfaces/ai-provider-adapter.interface';
 import { AiProviderError } from './ai-provider.error';
 import { AnthropicAdapter } from './anthropic.adapter';
+import { GeminiAdapter } from './gemini.adapter';
 import { MockAdapter } from './mock.adapter';
 import { OpenAiAdapter } from './openai.adapter';
 
@@ -161,6 +162,81 @@ describe('provider adapters', () => {
       await expect(adapter.chat(input, runtime)).rejects.toMatchObject({
         code: 'PROVIDER_AUTH_FAILED',
       });
+    });
+  });
+
+  describe('GeminiAdapter', () => {
+    const adapter = new GeminiAdapter();
+    const success = {
+      candidates: [{ content: { role: 'model', parts: [{ text: 'Hi from Gemini' }] } }],
+      modelVersion: 'test-model',
+      usageMetadata: { promptTokenCount: 7, candidatesTokenCount: 4 },
+    };
+    const overloaded = {
+      error: { code: 503, message: 'high demand', status: 'UNAVAILABLE' },
+    };
+
+    it('maps text and token usage and sends the system instruction', async () => {
+      let requestBody: Record<string, unknown> = {};
+      const runtime = await config((_request, body, response) => {
+        requestBody = JSON.parse(body) as Record<string, unknown>;
+        json(response, 200, success);
+      });
+
+      const result = await adapter.chat(input, runtime);
+
+      expect(result).toEqual({
+        text: 'Hi from Gemini',
+        model: 'test-model',
+        usage: { promptTokens: 7, completionTokens: 4 },
+      });
+      expect(requestBody).toMatchObject({
+        systemInstruction: { parts: [{ text: 'Be brief.' }] },
+        generationConfig: { maxOutputTokens: 256 },
+      });
+    });
+
+    it('retries a temporary upstream failure once', async () => {
+      let calls = 0;
+      const runtime = await config((_request, _body, response) => {
+        calls += 1;
+        if (calls === 1) json(response, 503, overloaded);
+        else json(response, 200, success);
+      });
+
+      await expect(adapter.chat(input, runtime)).resolves.toMatchObject({
+        text: 'Hi from Gemini',
+      });
+      expect(calls).toBe(2);
+    });
+
+    it('gives up after one retry and hides the upstream message', async () => {
+      let calls = 0;
+      const runtime = await config((_request, _body, response) => {
+        calls += 1;
+        json(response, 503, overloaded);
+      });
+
+      const error = await adapter.chat(input, runtime).catch((caught: unknown) => caught);
+      expect(error).toBeInstanceOf(AiProviderError);
+      expect((error as AiProviderError).code).toBe('PROVIDER_UNAVAILABLE');
+      expect((error as AiProviderError).message).not.toContain('high demand');
+      expect(calls).toBe(2);
+    });
+
+    it('does not retry an exhausted quota', async () => {
+      let calls = 0;
+      const runtime = await config((_request, _body, response) => {
+        calls += 1;
+        json(response, 429, {
+          error: { code: 429, message: 'quota exceeded', status: 'RESOURCE_EXHAUSTED' },
+        });
+      });
+
+      await expect(adapter.chat(input, runtime)).rejects.toMatchObject({
+        code: 'PROVIDER_RATE_LIMITED',
+      });
+      expect(calls).toBe(1);
     });
   });
 
